@@ -428,7 +428,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     @objc private func showHelp() {
-        NSWorkspace.shared.open(URL(string: "https://github.com/quangnd159/nickel")!)
+        NSWorkspace.shared.open(URL(string: "https://github.com/binhphuong-ab/nickel")!)
     }
 
     /// Disables "Move to Section…" when there's nothing to move (matches

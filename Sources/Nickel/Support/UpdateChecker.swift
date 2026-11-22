@@ -14,7 +14,7 @@ enum UpdateChecker {
         }
     }
 
-    private static let latestReleaseURL = URL(string: "https://api.github.com/repos/quangnd159/nickel/releases/latest")!
+    private static let latestReleaseURL = URL(string: "https://api.github.com/repos/binhphuong-ab/nickel/releases/latest")!
 
     static func check() {
         let task = URLSession.shared.dataTask(with: latestReleaseURL) { data, response, error in

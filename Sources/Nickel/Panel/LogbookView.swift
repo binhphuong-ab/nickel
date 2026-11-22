@@ -103,7 +103,7 @@ struct LogbookDayHeader: View {
 private struct LogbookBackButton: View {
     let action: () -> Void
 
-    @State private var isHovering = false
+    @ViewState private var isHovering = false
 
     var body: some View {
         Button(action: action) {

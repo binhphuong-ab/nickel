@@ -96,7 +96,7 @@ struct NoteRowContent: View {
     /// `InlineNoteEditorField`), the same pattern `ComposerField` and
     /// `NoteSourceTextView` use since `@FocusState` doesn't reach into an
     /// `NSViewRepresentable`.
-    @State private var editFieldFocused: Bool = false
+    @ViewState private var editFieldFocused: Bool = false
     @Environment(\.isMeasurementOnly) private var isMeasurementOnly
 
     private var note: Note? { store.notesByID[noteID] }

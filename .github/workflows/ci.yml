@@ -12,6 +12,10 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+      # `@State` is a macro on the macOS 27 SDK whose plugin needs Xcode.app;
+      # `@ViewState` (Support/ViewState.swift) builds with the Command Line Tools too.
+      - name: No bare @State
+        run: "! grep -rnE '^[[:space:]]*@State[[:space:]]' Sources Tests"
       - name: Build
         run: swift build
       - name: Test

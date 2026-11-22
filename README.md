@@ -1,5 +1,7 @@
 # Nickel
 
+> **This fork** ([binhphuong-ab/nickel](https://github.com/binhphuong-ab/nickel)) builds on **macOS 27 with only the Command Line Tools** — no Xcode.app needed. On the macOS 27 SDK, SwiftUI's `@State` became a macro whose plugin ships only with Xcode, so upstream fails to compile there; this fork spells view state `@ViewState` (a typealias for the `State` property wrapper) instead. Releases and in-app update checks point at this fork. Upstream: [quangnd159/nickel](https://github.com/quangnd159/nickel).
+
 Nickel started as a shameless copy of
 [Copper by shadcn](https://shadcn.com/copper). Two reasons: I wanted to save
 the $39, and I wanted to see what Claude could build. Hence the name, which
@@ -109,7 +111,8 @@ Arrow keys move the selection; hold ⇧ to extend a range.
 ## Build & install
 
 Requires macOS 26+ and the Xcode Command Line Tools (`xcode-select --install`)
-— a full Xcode.app install also works and isn't required either way.
+— a full Xcode.app install also works and isn't required either way, including
+on the macOS 27 SDK. (`swift test` needs XCTest, which only full Xcode provides.)
 
 ```bash
 swift build                          # compile the SwiftPM executable (debug)

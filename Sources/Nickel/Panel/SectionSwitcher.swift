@@ -27,13 +27,13 @@ struct SectionSwitcher: View {
     /// doc comment above.
     let move: Bool
 
-    @State private var query = ""
-    @State private var highlightedIndex = 0
+    @ViewState private var query = ""
+    @ViewState private var highlightedIndex = 0
 
     /// The selection count the move-mode header displays, captured once on
     /// appear so the title stays stable for the palette's whole lifetime —
     /// see `moveHeaderTitle`.
-    @State private var frozenMoveCount: Int?
+    @ViewState private var frozenMoveCount: Int?
     @Environment(\.controlActiveState) private var controlActiveState
 
     /// Whether the highlighted row draws with the emphasized (accent-filled,

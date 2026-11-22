@@ -60,35 +60,35 @@ struct PanelView: View {
     @EnvironmentObject private var store: NoteStore
     @EnvironmentObject private var selection: SelectionModel
     @EnvironmentObject private var actions: PanelActions
-    @State private var composerText = ""
-    @State private var pendingAttachments: [StagedAttachment] = []
+    @ViewState private var composerText = ""
+    @ViewState private var pendingAttachments: [StagedAttachment] = []
     /// The composer's staged destination-section chip. See
     /// `ComposerSectionChip` for the staging/removal logic; `stageSection`
     /// and `removeStagedSection` below are what the "#" suggestion popup
     /// calls when a row is accepted.
-    @State private var sectionChip = ComposerSectionChip()
+    @ViewState private var sectionChip = ComposerSectionChip()
     /// The "#…" query Esc last dismissed the suggestion popup at, or `nil`
     /// when nothing is dismissed. The popup itself has no state of its own:
     /// its rows are derived from the composer text, the chip, the sections,
     /// and this — see `ComposerSectionSuggestions.visibleRows`.
-    @State private var dismissedSuggestionQuery: String?
+    @ViewState private var dismissedSuggestionQuery: String?
     /// The suggestion popup's highlighted row. Clamped when read, so a
     /// shrinking result set can never point past the end.
-    @State private var suggestionHighlight = 0
-    @State private var isComposerDropTargeted = false
+    @ViewState private var suggestionHighlight = 0
+    @ViewState private var isComposerDropTargeted = false
     /// The transient "Attached N file(s)" confirmation shown above the
     /// composer after a drop, paperclip pick, or ⌘V paste stages new
     /// attachments; `nil` when nothing is showing. See `showAttachmentToast`.
-    @State private var attachmentToast: String?
+    @ViewState private var attachmentToast: String?
     // The empty state is long-lived (unlike `ShortcutsOverlay`, which is
     // recreated on each presentation), so it must follow Settings changes
     // rather than read `PanelSettings.captureKey` once.
-    @State private var captureKey = PanelSettings.captureKey
+    @ViewState private var captureKey = PanelSettings.captureKey
     /// Cancelled and rescheduled by `showAttachmentToast` so back-to-back
     /// stagings (e.g. dropping a few files right after pasting one) restart
     /// the auto-dismiss timer instead of an old one hiding the new toast
     /// early.
-    @State private var attachmentToastDismissTask: DispatchWorkItem?
+    @ViewState private var attachmentToastDismissTask: DispatchWorkItem?
     @Environment(\.controlActiveState) private var controlActiveState
 
     /// Corner radius of the composer card. Larger than a note row's so the
@@ -843,7 +843,7 @@ struct PanelView: View {
         let onRemove: () -> Void
         @ViewBuilder let content: () -> Content
 
-        @State private var isHovering = false
+        @ViewState private var isHovering = false
 
         var body: some View {
             HStack(spacing: 6) {

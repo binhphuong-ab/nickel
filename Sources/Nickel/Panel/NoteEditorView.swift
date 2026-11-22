@@ -11,8 +11,8 @@ struct NoteEditorView: View {
     let noteID: UUID
 
     @EnvironmentObject private var store: NoteStore
-    @State private var text: String
-    @State private var isEditorFocused = false
+    @ViewState private var text: String
+    @ViewState private var isEditorFocused = false
 
     /// The initial text comes in from the window controller: `store` isn't
     /// reachable at `init` time, and `@State` needs its seed there.

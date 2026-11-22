@@ -27,6 +27,7 @@ A native macOS note capture app, a clipboard that remembers: double-Shift grabs 
 
 ## Deliberate decisions — do not "fix"
 
+- **View-local state is `@ViewState`, never `@State`** (`Sources/Nickel/Support/ViewState.swift`). On the macOS 27 SDK `@State` is a SwiftUI macro whose plugin ships only with Xcode.app, so with just the Command Line Tools every view using it fails to build. `ViewState` is a typealias for the `State` property wrapper itself — identical behavior, builds everywhere. Don't "modernize" it back; CI rejects `@State`.
 - The note list and the Logbook are a view-based `NSTableView` (`Sources/Nickel/Panel/NoteListTable.swift`), not a SwiftUI `ScrollView`. The table owns click, ⇧-click, ⌘-click, arrows, ⌘A, right-click's `clickedRow` and scrolling; row *content* is still SwiftUI, hosted per cell. Two rules keep that working, and neither is safe to "tidy away":
   - A row's hosting view returns `nil` from `hitTest` unless it needs clicks itself (a section header, or the one note being edited). SwiftUI content would otherwise swallow every click and the table would never see one.
   - The selected look is a 2pt border on the cell's layer (the layer that also carries the rounded clip), driven by `NoteListRowView`'s `isSelected`/`isEmphasized`; AppKit's default filled highlight is suppressed. Don't swap in the default, and don't move the ring into the SwiftUI content — static content is clipped mid-height-animation, which visibly cuts the ring.

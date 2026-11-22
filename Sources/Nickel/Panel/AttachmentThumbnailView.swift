@@ -29,7 +29,7 @@ struct AttachmentThumbnailView: View {
     /// lets it keep its own shape inside the space offered.
     var contentMode: ContentMode = .fill
 
-    @State private var image: NSImage?
+    @ViewState private var image: NSImage?
 
     private static let cache = NSCache<NSString, NSImage>()
 

@@ -5,12 +5,12 @@ import SwiftUI
 /// (`.formStyle(.grouped)`) to read as native chrome rather than part of the
 /// panel itself.
 struct SettingsView: View {
-    @State private var launchAtLogin = LaunchAtLogin.isEnabled
-    @State private var keepOnTop = PanelSettings.keepPanelOnTop
-    @State private var showMenuBarIcon = PanelSettings.showMenuBarIcon
-    @State private var markDoneOnCopy = PanelSettings.markDoneOnCopy
-    @State private var captureKey = PanelSettings.captureKey
-    @State private var panelToggleKey = PanelSettings.panelToggleKey
+    @ViewState private var launchAtLogin = LaunchAtLogin.isEnabled
+    @ViewState private var keepOnTop = PanelSettings.keepPanelOnTop
+    @ViewState private var showMenuBarIcon = PanelSettings.showMenuBarIcon
+    @ViewState private var markDoneOnCopy = PanelSettings.markDoneOnCopy
+    @ViewState private var captureKey = PanelSettings.captureKey
+    @ViewState private var panelToggleKey = PanelSettings.panelToggleKey
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
