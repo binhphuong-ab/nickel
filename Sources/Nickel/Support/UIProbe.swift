@@ -62,9 +62,10 @@ final class UIProbeDelegate: NSObject, NSApplicationDelegate {
         temporaryDirectory = directory
 
         let store = NoteStore(fileURL: directory.appendingPathComponent("notes.json"))
-        store.add(text: "Short note above", sourceApp: nil)
-        store.add(text: Self.longNoteText, sourceApp: nil)
+        // New notes land on top, so these go in bottom-first.
         store.add(text: "Short note below", sourceApp: nil)
+        store.add(text: Self.longNoteText, sourceApp: nil)
+        store.add(text: "Short note above", sourceApp: nil)
         self.store = store
 
         let panel = FloatingPanel(store: store)
@@ -390,10 +391,16 @@ final class UIProbeDelegate: NSObject, NSApplicationDelegate {
     /// scrolls it into view — minimally — and that shrinking it back doesn't
     /// leave the scroll position hanging past the content.
     private func checkReveal(table: NoteListTableView, store: NoteStore, selection: SelectionModel) {
+        var added: [UUID] = []
         for index in 0..<12 {
             store.add(text: "Filler note \(index)", sourceApp: nil)
+            added.append(store.activeNotes[0].id)
         }
         store.add(text: Self.longNoteText, sourceApp: nil)
+        added.append(store.activeNotes[0].id)
+        // New notes land on top; drag them to the end in the order added, so
+        // the long note is the list's last row.
+        store.move(ids: added, toSection: store.activeSection, before: nil)
         settle()
 
         guard let bottomNote = store.activeNotes.last,
@@ -576,13 +583,18 @@ final class UIProbeDelegate: NSObject, NSApplicationDelegate {
         clipView: NSClipView
     ) {
         store.add(text: Self.veryLongNoteText, sourceApp: nil)
-        let tallNoteID = store.activeNotes.last?.id
+        let tallNoteID = store.activeNotes.first?.id
+        var added = [tallNoteID].compactMap { $0 }
         // Rows below it, so the reveal is computed on its own merits instead
         // of being pinned by the clamp at the end of the content — which is
         // what hid the two reveal paths disagreeing.
         for index in 0..<6 {
             store.add(text: "Tail note \(index)", sourceApp: nil)
+            added.append(store.activeNotes[0].id)
         }
+        // New notes land on top; drag them to the end in the order added, so
+        // the tall note sits near the bottom with the tail under it.
+        store.move(ids: added, toSection: store.activeSection, before: nil)
         settle()
 
         guard let tallNoteID,

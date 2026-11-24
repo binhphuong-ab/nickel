@@ -30,7 +30,7 @@ final class SelectionModelTests: XCTestCase {
     func testSelectionOfNoteHiddenByFilterSurvives() {
         store.add(text: "apple", sourceApp: nil)
         store.add(text: "banana", sourceApp: nil)
-        let idBanana = store.notes[1].id
+        let idBanana = store.notes[0].id
 
         selection.selectSingle(idBanana)
         XCTAssertEqual(selection.selectedIDs, [idBanana])
@@ -74,11 +74,11 @@ final class SelectionModelTests: XCTestCase {
 
         store.setActiveSection("A")
         store.add(text: "in-a", sourceApp: nil)
-        let idA = store.notes[1].id
+        let idA = store.notes[0].id
 
         store.setActiveSection("B")
         store.add(text: "in-b", sourceApp: nil)
-        let idB = store.notes[2].id
+        let idB = store.notes[0].id
 
         store.setActiveSection("A")
         XCTAssertEqual(selection.visibleOrder, [idA])
@@ -99,7 +99,7 @@ final class SelectionModelTests: XCTestCase {
             attachments: [(sourceURL: sourceURL, filename: "screenshot-beta.png", contentType: "public.png")],
             sourceApp: nil
         )
-        let idAttachmentOnly = store.notes[1].id
+        let idAttachmentOnly = store.notes[0].id
 
         selection.searchText = "beta"
 
@@ -214,7 +214,7 @@ final class SelectionModelTests: XCTestCase {
     func testSelectAllNotesIsScopedToWhatTheSearchFilterLeavesVisible() {
         store.add(text: "apple", sourceApp: nil)
         store.add(text: "banana", sourceApp: nil)
-        let idApple = store.notes[0].id
+        let idApple = store.notes.first { $0.text == "apple" }!.id
 
         selection.searchText = "apple"
         selection.selectAllNotes()

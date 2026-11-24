@@ -75,6 +75,10 @@ Notes are stored in a local JSON file: no accounts, no sync, no cloud.
   palette, lists cleared notes grouped by day, newest first; put a note back
   (to its section, or ungrouped if the section is gone) or delete it
   permanently, with confirmation.
+- **Newest on top, capped list**: new and freshly edited notes go to the top
+  of their section. The list keeps at most 50 notes (Settings → Notes in
+  list); past that, the least recently added or edited ones move to the
+  Logbook automatically. A note put back from the Logbook counts as fresh.
 - **Local-only storage**: notes live in a plain JSON file on disk. No
   accounts, no telemetry, no cloud sync.
 

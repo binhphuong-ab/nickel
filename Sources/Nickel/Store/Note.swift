@@ -17,6 +17,14 @@ struct Note: Identifiable, Codable, Equatable {
     /// When this note was last marked done; cleared when it's marked not
     /// done again. Nil for a note that has never been completed.
     var completedAt: Date?
+    /// When this note's text was last edited, or when it was put back from
+    /// the Logbook; nil until either happens. Together with `createdAt` it
+    /// says how recently the note was touched (`lastTouchedAt`), which is
+    /// what the live-note limit uses to pick which notes go to the Logbook.
+    var modifiedAt: Date?
+
+    /// The most recent of creation, last edit and last Put Back.
+    var lastTouchedAt: Date { modifiedAt ?? createdAt }
 
     init(
         id: UUID,
@@ -27,7 +35,8 @@ struct Note: Identifiable, Codable, Equatable {
         sourceApp: String?,
         attachments: [Attachment] = [],
         archivedAt: Date? = nil,
-        completedAt: Date? = nil
+        completedAt: Date? = nil,
+        modifiedAt: Date? = nil
     ) {
         self.id = id
         self.text = text
@@ -38,10 +47,11 @@ struct Note: Identifiable, Codable, Equatable {
         self.attachments = attachments
         self.archivedAt = archivedAt
         self.completedAt = completedAt
+        self.modifiedAt = modifiedAt
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, text, listName, isDone, createdAt, sourceApp, attachments, archivedAt, completedAt
+        case id, text, listName, isDone, createdAt, sourceApp, attachments, archivedAt, completedAt, modifiedAt
     }
 
     /// Custom decoding (rather than the synthesized initializer) so files
@@ -60,5 +70,6 @@ struct Note: Identifiable, Codable, Equatable {
         attachments = try container.decodeIfPresent([Attachment].self, forKey: .attachments) ?? []
         archivedAt = try container.decodeIfPresent(Date.self, forKey: .archivedAt)
         completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
+        modifiedAt = try container.decodeIfPresent(Date.self, forKey: .modifiedAt)
     }
 }

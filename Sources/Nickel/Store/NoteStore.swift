@@ -57,6 +57,18 @@ final class NoteStore: ObservableObject {
     private var lastCapturedText: String?
     private var lastCapturedAt: Date?
 
+    /// The most live notes the list keeps; past it, the least recently
+    /// touched ones (see `Note.lastTouchedAt`) move to the Logbook. `nil`
+    /// means no limit — the default, so tests and the UI probe are unaffected.
+    /// The app sets it from `PanelSettings.maxLiveNotes`. Lowering it applies
+    /// at once; nothing is deleted, the Logbook can put any of them back.
+    var liveNoteLimit: Int? {
+        didSet {
+            guard liveNoteLimit != oldValue else { return }
+            if enforceLiveNoteLimit() { scheduleSave() }
+        }
+    }
+
     init(fileURL: URL? = nil) {
         // Dev/test override: NICKEL_STORE_PATH points the store at an
         // alternate JSON file instead of the real Application Support one.
@@ -140,8 +152,15 @@ final class NoteStore: ObservableObject {
             createdAt: Date(),
             sourceApp: sourceApp
         )
-        notes.append(note)
+        insertAtTop(note)
         scheduleSave()
+    }
+
+    /// New notes go to the top of the list (the front of `notes`, which is
+    /// display order), then the live-note limit pushes the oldest out.
+    private func insertAtTop(_ note: Note) {
+        notes.insert(note, at: 0)
+        enforceLiveNoteLimit()
     }
 
     private static func capped(_ text: String) -> String {
@@ -175,7 +194,7 @@ final class NoteStore: ObservableObject {
             sourceApp: sourceApp,
             attachments: savedAttachments
         )
-        notes.append(note)
+        insertAtTop(note)
         scheduleSave()
         return failedIndices
     }
@@ -214,9 +233,21 @@ final class NoteStore: ObservableObject {
         return (saved, failedIndices)
     }
 
+    /// Saves an edit and moves the note to the top of the list, so the most
+    /// recently edited note is the first one you see. A commit that didn't
+    /// change the text (opening and closing the inline editor) is a no-op and
+    /// leaves the note where it is. The editor window calls this on every
+    /// keystroke; only the first one moves anything.
     func update(id: UUID, text: String) {
-        guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
-        notes[index].text = text
+        guard let index = notes.firstIndex(where: { $0.id == id }),
+              notes[index].text != text else { return }
+        var note = notes[index]
+        note.text = text
+        note.modifiedAt = Date()
+        var reordered = notes
+        reordered.remove(at: index)
+        reordered.insert(note, at: 0)
+        notes = reordered
         scheduleSave()
     }
 
@@ -548,18 +579,54 @@ final class NoteStore: ObservableObject {
     /// the list, keeping their done state. A note whose section has been
     /// deleted or renamed away in the meantime comes back ungrouped, the way
     /// `dissolveSection` leaves notes.
+    ///
+    /// Put-back notes count as just touched and land at the top of the list;
+    /// otherwise, with the list at its limit, the oldest of them would be
+    /// sent straight back to the Logbook.
     func restore(ids: Set<UUID>) {
         guard !ids.isEmpty else { return }
-        var didRestore = false
-        for index in notes.indices where ids.contains(notes[index].id) && notes[index].archivedAt != nil {
-            notes[index].archivedAt = nil
-            if let listName = notes[index].listName, !sections.contains(listName) {
-                notes[index].listName = nil
+        let now = Date()
+        var restored: [Note] = []
+        var remaining: [Note] = []
+        for var note in notes {
+            guard ids.contains(note.id), note.archivedAt != nil else {
+                remaining.append(note)
+                continue
             }
-            didRestore = true
+            note.archivedAt = nil
+            note.modifiedAt = now
+            if let listName = note.listName, !sections.contains(listName) {
+                note.listName = nil
+            }
+            restored.append(note)
         }
-        guard didRestore else { return }
+        guard !restored.isEmpty else { return }
+        notes = restored + remaining
+        enforceLiveNoteLimit()
         scheduleSave()
+    }
+
+    /// Moves the least recently touched live notes into the Logbook until at
+    /// most `liveNoteLimit` remain. Ties (notes never edited, created in the
+    /// same instant) fall to the one lower in the list. Returns whether
+    /// anything was archived; callers schedule the save.
+    @discardableResult
+    private func enforceLiveNoteLimit() -> Bool {
+        guard let limit = liveNoteLimit, limit >= 0 else { return false }
+        let live = notes.enumerated().filter { $0.element.archivedAt == nil }
+        let overflow = live.count - limit
+        guard overflow > 0 else { return false }
+        let oldestFirst = live.sorted { lhs, rhs in
+            if lhs.element.lastTouchedAt != rhs.element.lastTouchedAt {
+                return lhs.element.lastTouchedAt < rhs.element.lastTouchedAt
+            }
+            return lhs.offset > rhs.offset
+        }
+        let now = Date()
+        for (index, _) in oldestFirst.prefix(overflow) {
+            notes[index].archivedAt = now
+        }
+        return true
     }
 
     /// The Logbook's "Delete Permanently": the same removal as any other
@@ -571,6 +638,7 @@ final class NoteStore: ObservableObject {
 
     /// Joins the text of the given notes (in note order, separated by a blank
     /// line) into the earliest (first-created) note, deleting the others.
+    /// That's an edit, so the merged note moves to the top like any other.
     /// Attachments follow the same way: the donor notes' files are physically
     /// moved on disk into the survivor's attachments directory (an
     /// attachment's location is derived from its owning note's id, so
@@ -600,8 +668,14 @@ final class NoteStore: ObservableObject {
         }
         notes[firstIndex].attachments += donors.flatMap { movedByDonor[$0.id] ?? [] }
 
+        notes[firstIndex].modifiedAt = Date()
+
         let idsToRemove = Set(donors.map(\.id))
-        notes.removeAll { idsToRemove.contains($0.id) }
+        var remaining = notes.filter { !idsToRemove.contains($0.id) }
+        if let survivorIndex = remaining.firstIndex(where: { $0.id == first.id }) {
+            remaining.insert(remaining.remove(at: survivorIndex), at: 0)
+        }
+        notes = remaining
         for donor in donors {
             let moved = movedByDonor[donor.id] ?? []
             if moved.count == donor.attachments.count {

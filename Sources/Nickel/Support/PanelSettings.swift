@@ -33,6 +33,31 @@ enum PanelSettings {
         }
     }
 
+    private static let maxLiveNotesDefaultsKey = "maxLiveNotes"
+
+    static let defaultMaxLiveNotes = 50
+    static let maxLiveNotesRange = 1...9_999
+
+    /// Posted whenever `maxLiveNotes` changes, so `AppDelegate` can hand the
+    /// new limit to the store, which applies it at once.
+    static let maxLiveNotesDidChange = Notification.Name("NickelMaxLiveNotesDidChange")
+
+    /// The most notes the list keeps. Past it, the least recently added or
+    /// edited notes move to the Logbook (see `NoteStore.liveNoteLimit`).
+    static var maxLiveNotes: Int {
+        get {
+            let defaults = UserDefaults.standard
+            guard defaults.object(forKey: maxLiveNotesDefaultsKey) != nil else { return defaultMaxLiveNotes }
+            return defaults.integer(forKey: maxLiveNotesDefaultsKey).clamped(to: maxLiveNotesRange)
+        }
+        set {
+            let clamped = newValue.clamped(to: maxLiveNotesRange)
+            guard clamped != maxLiveNotes || UserDefaults.standard.object(forKey: maxLiveNotesDefaultsKey) == nil else { return }
+            UserDefaults.standard.set(clamped, forKey: maxLiveNotesDefaultsKey)
+            NotificationCenter.default.post(name: maxLiveNotesDidChange, object: nil)
+        }
+    }
+
     private static let markDoneOnCopyDefaultsKey = "markDoneOnCopy"
 
     /// Whether copying notes also marks them done. Read at copy time
@@ -123,5 +148,11 @@ enum PanelSettings {
                 NotificationCenter.default.post(name: panelToggleKeyDidChange, object: nil)
             }
         }
+    }
+}
+
+private extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
     }
 }

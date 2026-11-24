@@ -3,15 +3,15 @@ import XCTest
 
 final class UpdateCheckerTests: XCTestCase {
     func testAcceptsGitHubReleaseURL() {
-        XCTAssertNotNil(UpdateChecker.validatedReleaseURL("https://github.com/quangnd159/nickel/releases/tag/v1.0.1"))
+        XCTAssertNotNil(UpdateChecker.validatedReleaseURL("https://github.com/binhphuong-ab/nickel/releases/tag/v1.0.1"))
     }
 
     func testAcceptsGitHubSubdomain() {
-        XCTAssertNotNil(UpdateChecker.validatedReleaseURL("https://api.github.com/repos/quangnd159/nickel"))
+        XCTAssertNotNil(UpdateChecker.validatedReleaseURL("https://api.github.com/repos/binhphuong-ab/nickel"))
     }
 
     func testRejectsNonHTTPSScheme() {
-        XCTAssertNil(UpdateChecker.validatedReleaseURL("http://github.com/quangnd159/nickel/releases/tag/v1.0.1"))
+        XCTAssertNil(UpdateChecker.validatedReleaseURL("http://github.com/binhphuong-ab/nickel/releases/tag/v1.0.1"))
     }
 
     func testRejectsSpoofedHostWithGitHubInPath() {

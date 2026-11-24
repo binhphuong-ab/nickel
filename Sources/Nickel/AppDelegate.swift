@@ -50,6 +50,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             self?.statusItem?.isVisible = PanelSettings.showMenuBarIcon
         }
 
+        // The list's note limit lives in Settings; the store enforces it.
+        noteStore.liveNoteLimit = PanelSettings.maxLiveNotes
+        NotificationCenter.default.addObserver(
+            forName: PanelSettings.maxLiveNotesDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.noteStore.liveNoteLimit = PanelSettings.maxLiveNotes
+        }
+
         NotificationCenter.default.addObserver(
             forName: .nickelEditNoteInNewWindow,
             object: nil,

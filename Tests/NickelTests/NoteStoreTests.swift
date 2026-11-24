@@ -14,6 +14,16 @@ final class NoteStoreTests: XCTestCase {
         store = NoteStore(fileURL: fileURL)
     }
 
+    /// The note with this text. New notes land on top, so a position in
+    /// `notes` says when a note was added rather than which one it is.
+    private func note(_ text: String, file: StaticString = #filePath, line: UInt = #line) -> Note {
+        guard let note = store.notes.first(where: { $0.text == text }) else {
+            XCTFail("no note \"\(text)\"", file: file, line: line)
+            fatalError()
+        }
+        return note
+    }
+
     override func tearDown() {
         try? FileManager.default.removeItem(at: tempDirectory)
         store = nil
@@ -400,7 +410,7 @@ final class NoteStoreTests: XCTestCase {
         let idA = store.notes[0].id
         store.setActiveSection(nil)
         store.add(text: "b", sourceApp: nil)
-        let idB = store.notes[1].id
+        let idB = store.notes[0].id
 
         store.toggleDone(ids: [idA, idB])
         store.setActiveSection("Work")
@@ -429,7 +439,7 @@ final class NoteStoreTests: XCTestCase {
         let idA = store.notes[0].id
         store.setActiveSection(nil) // Show All is active, not "Work"
         store.add(text: "b", sourceApp: nil)
-        let idB = store.notes[1].id
+        let idB = store.notes[0].id
         store.toggleDone(ids: [idA])
 
         store.clearDone(in: "Work")
@@ -444,19 +454,19 @@ final class NoteStoreTests: XCTestCase {
         let idA = store.notes[0].id
         store.toggleDone(ids: [idA])
         store.clearDone(in: "Work")
-        let firstStamp = store.notes[0].archivedAt
+        let firstStamp = note("a").archivedAt
 
         // A second done note in the same section, cleared later: the first
         // note's original stamp must survive (the Logbook groups by the day
         // a note was cleared, so re-stamping would move it).
         store.add(text: "b", sourceApp: nil)
-        let idB = store.notes[1].id
+        let idB = store.notes[0].id
         store.toggleDone(ids: [idB])
         store.clearDone(in: "Work")
 
-        XCTAssertEqual(store.notes[0].archivedAt, firstStamp)
-        XCTAssertNotNil(store.notes[1].archivedAt)
-        XCTAssertNotEqual(store.notes[1].archivedAt, firstStamp)
+        XCTAssertEqual(note("a").archivedAt, firstStamp)
+        XCTAssertNotNil(note("b").archivedAt)
+        XCTAssertNotEqual(note("b").archivedAt, firstStamp)
     }
 
     func testClearDoneArchivesRatherThanDeletingAndKeepsAttachments() throws {
@@ -479,7 +489,7 @@ final class NoteStoreTests: XCTestCase {
     func testClearDoneLeavesNotDoneNotesAlone() {
         store.add(text: "a", sourceApp: nil)
         store.add(text: "b", sourceApp: nil)
-        store.toggleDone(ids: [store.notes[0].id])
+        store.toggleDone(ids: [note("a").id])
 
         store.clearDone()
 
@@ -491,13 +501,13 @@ final class NoteStoreTests: XCTestCase {
         let id = store.notes[0].id
         store.toggleDone(ids: [id])
         store.clearDone()
-        let firstStamp = store.notes[0].archivedAt
+        let firstStamp = note("a").archivedAt
 
         store.add(text: "b", sourceApp: nil)
-        store.toggleDone(ids: [store.notes[1].id])
+        store.toggleDone(ids: [note("b").id])
         store.clearDone()
 
-        XCTAssertEqual(store.notes[0].archivedAt, firstStamp)
+        XCTAssertEqual(note("a").archivedAt, firstStamp)
     }
 
     // MARK: - archive(ids:)
@@ -550,8 +560,8 @@ final class NoteStoreTests: XCTestCase {
         store.add(text: "a", sourceApp: nil)
         store.add(text: "b", sourceApp: nil)
         store.add(text: "c", sourceApp: nil)
-        let idA = store.notes[0].id
-        let idB = store.notes[1].id
+        let idA = note("a").id
+        let idB = note("b").id
 
         store.toggleDone(ids: [idA])
         store.clearDone()
@@ -630,8 +640,8 @@ final class NoteStoreTests: XCTestCase {
         store.createSection(named: "Work")
         store.add(text: "a", attachments: [(sourceURL: source, filename: "a.txt", contentType: "public.text")], sourceApp: nil)
         store.add(text: "b", sourceApp: nil)
-        let idA = store.notes[0].id
-        let idB = store.notes[1].id
+        let idA = note("a").id
+        let idB = note("b").id
         let noteDirectory = store.attachmentsDirectory.appendingPathComponent(idA.uuidString, isDirectory: true)
 
         store.archiveSection("Work")
@@ -725,14 +735,14 @@ final class NoteStoreTests: XCTestCase {
         store.add(text: "first", attachments: [(sourceURL: sourceA, filename: "a.txt", contentType: "public.text")], sourceApp: nil)
         let firstID = store.notes[0].id
         store.add(text: "second", attachments: [(sourceURL: sourceB, filename: "b.txt", contentType: "public.text")], sourceApp: nil)
-        let secondID = store.notes[1].id
+        let secondID = store.notes[0].id
 
         store.merge(ids: [firstID, secondID])
 
         XCTAssertEqual(store.notes.count, 1)
         let survivor = store.notes[0]
         XCTAssertEqual(survivor.id, firstID) // earliest-created note survives
-        XCTAssertEqual(survivor.text, "first\n\nsecond")
+        XCTAssertEqual(survivor.text, "second\n\nfirst") // visible order: newest on top
         XCTAssertEqual(survivor.attachments.count, 2)
 
         // Donor's attachment file physically moved into the survivor's directory.
@@ -752,18 +762,18 @@ final class NoteStoreTests: XCTestCase {
         store.add(text: "first", attachments: [(sourceURL: sourceA, filename: "a.txt", contentType: "public.text")], sourceApp: nil)
         let firstID = store.notes[0].id
         store.add(text: "second", attachments: [(sourceURL: sourceB, filename: "b.txt", contentType: "public.text")], sourceApp: nil)
-        let secondID = store.notes[1].id
-        let donorAttachment = store.notes[1].attachments[0]
+        let secondID = store.notes[0].id
+        let donorAttachment = note("second").attachments[0]
 
         // Delete the donor's file on disk before merging, so moveItem fails.
-        let donorFileURL = store.url(for: donorAttachment, in: store.notes[1])
+        let donorFileURL = store.url(for: donorAttachment, in: note("second"))
         try FileManager.default.removeItem(at: donorFileURL)
 
         store.merge(ids: [firstID, secondID])
 
         XCTAssertEqual(store.notes.count, 1) // merge still happened
         let survivor = store.notes[0]
-        XCTAssertEqual(survivor.text, "first\n\nsecond")
+        XCTAssertEqual(survivor.text, "second\n\nfirst") // visible order: newest on top
         XCTAssertFalse(survivor.attachments.contains(where: { $0.id == donorAttachment.id }))
     }
 
@@ -776,8 +786,8 @@ final class NoteStoreTests: XCTestCase {
         store.add(text: "first", attachments: [(sourceURL: sourceA, filename: "a.txt", contentType: "public.text")], sourceApp: nil)
         let firstID = store.notes[0].id
         store.add(text: "second", attachments: [(sourceURL: sourceB, filename: "b.txt", contentType: "public.text")], sourceApp: nil)
-        let secondID = store.notes[1].id
-        let donorAttachment = store.notes[1].attachments[0]
+        let secondID = store.notes[0].id
+        let donorAttachment = note("second").attachments[0]
 
         // Pre-create a collision at the destination path so moveItem throws.
         let destinationDir = store.attachmentsDirectory.appendingPathComponent(firstID.uuidString, isDirectory: true)
@@ -800,13 +810,14 @@ final class NoteStoreTests: XCTestCase {
         store.add(text: "first", sourceApp: nil)
         let firstID = store.notes[0].id
         store.add(text: "second", sourceApp: nil)
-        let secondID = store.notes[1].id
+        let secondID = store.notes[0].id
         store.add(text: "third", sourceApp: nil)
-        let thirdID = store.notes[2].id
+        let thirdID = store.notes[0].id
 
-        // Drag "third" to the front: array order is now third, first, second,
-        // while creation order (first, second, third) is unchanged.
-        store.move(ids: [thirdID], toSection: nil, before: firstID)
+        // New notes land on top (third, second, first); drag "second" to the
+        // end: array order is now third, first, second, while creation order
+        // (first, second, third) is unchanged.
+        store.move(ids: [secondID], toSection: nil, before: nil)
         XCTAssertEqual(store.notes.map(\.id), [thirdID, firstID, secondID])
 
         store.merge(ids: [firstID, secondID, thirdID])
@@ -826,13 +837,14 @@ final class NoteStoreTests: XCTestCase {
         store.add(text: "first", sourceApp: nil)
         let firstID = store.notes[0].id
         store.add(text: "second", attachments: [(sourceURL: sourceA, filename: "a.txt", contentType: "public.text")], sourceApp: nil)
-        let secondID = store.notes[1].id
+        let secondID = store.notes[0].id
         store.add(text: "third", attachments: [(sourceURL: sourceB, filename: "b.txt", contentType: "public.text")], sourceApp: nil)
-        let thirdID = store.notes[2].id
+        let thirdID = store.notes[0].id
 
-        // Drag "third" before "second": array order is first, third, second,
-        // so third's attachment should be appended before second's.
-        store.move(ids: [thirdID], toSection: nil, before: secondID)
+        // New notes land on top (third, second, first); drag "first" back to
+        // the top: array order is first, third, second, so third's attachment
+        // should be appended before second's.
+        store.move(ids: [firstID], toSection: nil, before: thirdID)
         XCTAssertEqual(store.notes.map(\.id), [firstID, thirdID, secondID])
 
         store.merge(ids: [firstID, secondID, thirdID])
@@ -1012,6 +1024,8 @@ final class NoteStoreTests: XCTestCase {
         XCTAssertTrue(note.attachments.isEmpty)
         XCTAssertNil(note.archivedAt)
         XCTAssertNil(note.completedAt)
+        XCTAssertNil(note.modifiedAt)
+        XCTAssertEqual(note.lastTouchedAt, note.createdAt)
     }
 
     func testArchivedAndCompletedStampsRoundTrip() {
@@ -1209,5 +1223,136 @@ final class NoteStoreTests: XCTestCase {
 
         XCTAssertTrue(reloaded.notes.isEmpty)
         XCTAssertTrue(FileManager.default.fileExists(atPath: orphanDir.path))
+    }
+
+    // MARK: - Newest on top & live-note limit
+
+    func testNewNotesGoOnTop() {
+        store.add(text: "a", sourceApp: nil)
+        store.add(text: "b", sourceApp: nil)
+        store.add(text: "c", sourceApp: nil)
+
+        XCTAssertEqual(store.activeNotes.map(\.text), ["c", "b", "a"])
+    }
+
+    func testEditMovesTheNoteToTopAndStampsIt() {
+        store.add(text: "a", sourceApp: nil)
+        store.add(text: "b", sourceApp: nil)
+        store.add(text: "c", sourceApp: nil)
+
+        store.update(id: note("a").id, text: "a edited")
+
+        XCTAssertEqual(store.activeNotes.map(\.text), ["a edited", "c", "b"])
+        XCTAssertNotNil(note("a edited").modifiedAt)
+        XCTAssertNil(note("b").modifiedAt)
+    }
+
+    /// Opening and closing the inline editor commits the same text; that
+    /// isn't an edit, so the note must not jump.
+    func testUnchangedCommitLeavesTheNoteInPlace() {
+        store.add(text: "a", sourceApp: nil)
+        store.add(text: "b", sourceApp: nil)
+
+        store.update(id: note("a").id, text: "a")
+
+        XCTAssertEqual(store.activeNotes.map(\.text), ["b", "a"])
+        XCTAssertNil(note("a").modifiedAt)
+    }
+
+    func testNoLimitByDefault() {
+        for index in 0..<120 {
+            store.add(text: "\(index)", sourceApp: nil)
+        }
+
+        XCTAssertEqual(store.activeNotes.count, 120)
+        XCTAssertTrue(store.archivedNotes.isEmpty)
+    }
+
+    func testAddingPastTheLimitMovesTheOldestToTheLogbook() {
+        store.liveNoteLimit = 3
+        store.add(text: "a", sourceApp: nil)
+        store.add(text: "b", sourceApp: nil)
+        store.add(text: "c", sourceApp: nil)
+
+        store.add(text: "d", sourceApp: nil)
+
+        XCTAssertEqual(store.activeNotes.map(\.text), ["d", "c", "b"])
+        XCTAssertEqual(store.archivedNotes.map(\.text), ["a"])
+    }
+
+    /// The limit goes by when a note was last touched, not when it was made:
+    /// an old note that was just edited outlives newer untouched ones.
+    func testAnEditedOldNoteOutlivesNewerUntouchedOnes() {
+        store.add(text: "a", sourceApp: nil)
+        store.add(text: "b", sourceApp: nil)
+        store.add(text: "c", sourceApp: nil)
+        store.update(id: note("a").id, text: "a edited")
+        store.liveNoteLimit = 3
+
+        store.add(text: "d", sourceApp: nil)
+
+        XCTAssertEqual(store.activeNotes.map(\.text), ["d", "a edited", "c"])
+        XCTAssertEqual(store.archivedNotes.map(\.text), ["b"])
+    }
+
+    func testLoweringTheLimitAppliesAtOnceAndKeepsTheNewest() {
+        for text in ["a", "b", "c", "d", "e"] {
+            store.add(text: text, sourceApp: nil)
+        }
+
+        store.liveNoteLimit = 2
+
+        XCTAssertEqual(store.activeNotes.map(\.text), ["e", "d"])
+        XCTAssertEqual(Set(store.archivedNotes.map(\.text)), ["a", "b", "c"])
+        XCTAssertEqual(store.notes.count, 5, "nothing is deleted; overflow goes to the Logbook")
+    }
+
+    func testRaisingTheLimitBringsNothingBack() {
+        store.liveNoteLimit = 1
+        store.add(text: "a", sourceApp: nil)
+        store.add(text: "b", sourceApp: nil)
+
+        store.liveNoteLimit = 10
+
+        XCTAssertEqual(store.activeNotes.map(\.text), ["b"])
+        XCTAssertEqual(store.archivedNotes.map(\.text), ["a"])
+    }
+
+    /// Put Back counts as touching the note, so with the list full it pushes
+    /// out the oldest live note instead of bouncing straight back.
+    func testPutBackLandsOnTopAndPushesOutTheOldestLiveNote() {
+        store.liveNoteLimit = 2
+        store.add(text: "a", sourceApp: nil)
+        store.add(text: "b", sourceApp: nil)
+        store.add(text: "c", sourceApp: nil)
+        XCTAssertEqual(store.archivedNotes.map(\.text), ["a"])
+
+        store.restore(ids: [note("a").id])
+
+        XCTAssertEqual(store.activeNotes.map(\.text), ["a", "c"])
+        XCTAssertEqual(store.archivedNotes.map(\.text), ["b"])
+    }
+
+    func testMergedNoteMovesToTop() {
+        store.add(text: "a", sourceApp: nil)
+        store.add(text: "b", sourceApp: nil)
+        store.add(text: "c", sourceApp: nil)
+
+        store.merge(ids: [note("a").id, note("b").id])
+
+        XCTAssertEqual(store.activeNotes.map(\.text), ["b\n\na", "c"])
+        XCTAssertNotNil(store.activeNotes[0].modifiedAt)
+    }
+
+    func testModifiedAtRoundTrips() {
+        store.add(text: "a", sourceApp: nil)
+        store.update(id: note("a").id, text: "b")
+        let stamp = note("b").modifiedAt
+        store.saveNow()
+
+        let reloaded = NoteStore(fileURL: fileURL)
+
+        XCTAssertNotNil(stamp)
+        XCTAssertEqual(reloaded.notes.first?.modifiedAt?.timeIntervalSince1970 ?? 0, stamp?.timeIntervalSince1970 ?? 1, accuracy: 1)
     }
 }

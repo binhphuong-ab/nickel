@@ -156,7 +156,7 @@ final class PanelActionsTests: XCTestCase {
         store.add(text: "first", sourceApp: nil)
         let idFirst = store.notes[0].id
         store.add(text: "second", sourceApp: nil)
-        let idSecond = store.notes[1].id
+        let idSecond = store.notes[0].id
 
         selection.selectedIDs = [idFirst, idSecond]
         actions.merge()

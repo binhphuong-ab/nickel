@@ -59,7 +59,7 @@ final class NoteListRowsTests: XCTestCase {
         let looseID = store.notes[0].id
         store.setActiveSection("Work")
         store.add(text: "in work", sourceApp: nil)
-        let workID = store.notes[1].id
+        let workID = store.notes[0].id
         store.setActiveSection(nil)
 
         XCTAssertEqual(rows, [.note(looseID), .sectionHeader("Work"), .note(workID)])
@@ -89,7 +89,7 @@ final class NoteListRowsTests: XCTestCase {
     func testSearchFilterNarrowsTheRows() {
         store.add(text: "apple", sourceApp: nil)
         store.add(text: "banana", sourceApp: nil)
-        let idApple = store.notes[0].id
+        let idApple = store.notes.first { $0.text == "apple" }!.id
 
         selection.searchText = "apple"
         XCTAssertEqual(rows, [.note(idApple)])

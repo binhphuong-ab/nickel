@@ -9,6 +9,7 @@ struct SettingsView: View {
     @ViewState private var keepOnTop = PanelSettings.keepPanelOnTop
     @ViewState private var showMenuBarIcon = PanelSettings.showMenuBarIcon
     @ViewState private var markDoneOnCopy = PanelSettings.markDoneOnCopy
+    @ViewState private var maxLiveNotes = PanelSettings.maxLiveNotes
     @ViewState private var captureKey = PanelSettings.captureKey
     @ViewState private var panelToggleKey = PanelSettings.panelToggleKey
 
@@ -40,6 +41,29 @@ struct SettingsView: View {
                     }
             } footer: {
                 Text("With the menu bar icon hidden, Nickel stays available via its hotkeys and the Dock.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                LabeledContent("Notes in list") {
+                    HStack(spacing: 6) {
+                        TextField("Notes in list", value: $maxLiveNotes, format: .number)
+                            .labelsHidden()
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 56)
+                        Stepper("Notes in list", value: $maxLiveNotes, in: PanelSettings.maxLiveNotesRange, step: 10)
+                            .labelsHidden()
+                    }
+                }
+                .onChange(of: maxLiveNotes) { _, newValue in
+                    PanelSettings.maxLiveNotes = newValue
+                    // Out-of-range typing is clamped by the setting; show
+                    // what was actually stored.
+                    if PanelSettings.maxLiveNotes != newValue { maxLiveNotes = PanelSettings.maxLiveNotes }
+                }
+            } footer: {
+                Text("Newly added and edited notes go to the top. Past this many, the oldest move to the Logbook.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

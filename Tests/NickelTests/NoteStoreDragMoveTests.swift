@@ -21,14 +21,14 @@ final class NoteStoreDragMoveTests: XCTestCase {
         super.tearDown()
     }
 
-    /// Adds notes with the given texts, ungrouped, and returns their ids in
-    /// the order added.
+    /// Adds notes so they read `texts` top to bottom, and returns their ids
+    /// in that order. New notes land on top, so they're added last-first.
     @discardableResult
     private func addNotes(_ texts: [String]) -> [UUID] {
-        for text in texts {
+        for text in texts.reversed() {
             store.add(text: text, sourceApp: nil)
         }
-        return store.activeNotes.suffix(texts.count).map(\.id)
+        return store.activeNotes.prefix(texts.count).map(\.id)
     }
 
     /// The visible order of a section's notes, by text.

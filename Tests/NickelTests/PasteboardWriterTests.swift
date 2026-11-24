@@ -32,6 +32,11 @@ final class PasteboardWriterTests: XCTestCase {
         super.tearDown()
     }
 
+    /// The store's notes oldest-first, the order each test adds them in.
+    /// The store keeps the newest on top, but these tests are about how the
+    /// writer lays out whatever order it's handed.
+    private var notesInAddedOrder: [Note] { store.notes.reversed() }
+
     private func pngData() -> Data {
         Data(base64Encoded: Self.onePixelPNGBase64)!
     }
@@ -41,7 +46,7 @@ final class PasteboardWriterTests: XCTestCase {
     func testTextOnlyNoteProducesSingleStringItem() {
         store.add(text: "hello world", sourceApp: nil)
 
-        PasteboardWriter.copy(notes: store.notes, store: store, pasteboard: pasteboard)
+        PasteboardWriter.copy(notes: notesInAddedOrder, store: store, pasteboard: pasteboard)
 
         XCTAssertEqual(pasteboard.pasteboardItems?.count, 1)
         let item = pasteboard.pasteboardItems![0]
@@ -62,7 +67,7 @@ final class PasteboardWriterTests: XCTestCase {
             sourceApp: nil
         )
 
-        PasteboardWriter.copy(notes: store.notes, store: store, pasteboard: pasteboard)
+        PasteboardWriter.copy(notes: notesInAddedOrder, store: store, pasteboard: pasteboard)
 
         let items = pasteboard.pasteboardItems!
         XCTAssertEqual(items.count, 2)
@@ -95,7 +100,7 @@ final class PasteboardWriterTests: XCTestCase {
             sourceApp: nil
         )
 
-        PasteboardWriter.copy(notes: store.notes, store: store, pasteboard: pasteboard)
+        PasteboardWriter.copy(notes: notesInAddedOrder, store: store, pasteboard: pasteboard)
 
         let richItem = pasteboard.pasteboardItems![0]
         let rtfdData = try XCTUnwrap(richItem.data(forType: .rtfd))
@@ -127,7 +132,7 @@ final class PasteboardWriterTests: XCTestCase {
             sourceApp: nil
         )
 
-        PasteboardWriter.copy(notes: store.notes, store: store, pasteboard: pasteboard)
+        PasteboardWriter.copy(notes: notesInAddedOrder, store: store, pasteboard: pasteboard)
 
         let items = pasteboard.pasteboardItems!
         XCTAssertEqual(items.count, 2)
@@ -165,7 +170,7 @@ final class PasteboardWriterTests: XCTestCase {
             sourceApp: nil
         )
 
-        PasteboardWriter.copy(notes: store.notes, store: store, pasteboard: pasteboard)
+        PasteboardWriter.copy(notes: notesInAddedOrder, store: store, pasteboard: pasteboard)
 
         let items = pasteboard.pasteboardItems!
         // rich item + 2 attachment items
@@ -238,7 +243,7 @@ final class PasteboardWriterTests: XCTestCase {
         store.add(text: "first", sourceApp: nil)
         store.add(text: "second", sourceApp: nil)
 
-        PasteboardWriter.copy(notes: store.notes, store: store, pasteboard: pasteboard)
+        PasteboardWriter.copy(notes: notesInAddedOrder, store: store, pasteboard: pasteboard)
 
         let items = pasteboard.pasteboardItems!
         XCTAssertEqual(items.count, 1)
@@ -250,7 +255,7 @@ final class PasteboardWriterTests: XCTestCase {
         store.add(text: "second", sourceApp: nil)
         store.add(text: "third", sourceApp: nil)
 
-        PasteboardWriter.copyAsList(notes: store.notes, store: store, pasteboard: pasteboard)
+        PasteboardWriter.copyAsList(notes: notesInAddedOrder, store: store, pasteboard: pasteboard)
 
         let items = pasteboard.pasteboardItems!
         XCTAssertEqual(items.count, 1)
@@ -264,7 +269,7 @@ final class PasteboardWriterTests: XCTestCase {
         store.add(text: "first line\nsecond line", sourceApp: nil)
         store.add(text: "second", sourceApp: nil)
 
-        PasteboardWriter.copyAsList(notes: store.notes, store: store, pasteboard: pasteboard)
+        PasteboardWriter.copyAsList(notes: notesInAddedOrder, store: store, pasteboard: pasteboard)
 
         let items = pasteboard.pasteboardItems!
         XCTAssertEqual(items[0].string(forType: .string), "1. first line\n   second line\n2. second")
@@ -285,7 +290,7 @@ final class PasteboardWriterTests: XCTestCase {
             sourceApp: nil
         )
 
-        let layout = try XCTUnwrap(PasteboardWriter.copy(notes: store.notes, store: store, pasteboard: pasteboard))
+        let layout = try XCTUnwrap(PasteboardWriter.copy(notes: notesInAddedOrder, store: store, pasteboard: pasteboard))
 
         PasteboardWriter.writeAttachmentsOnly(layout, pasteboard: pasteboard)
         XCTAssertEqual(pasteboard.pasteboardItems?.count, 1)
@@ -319,7 +324,7 @@ final class PasteboardWriterTests: XCTestCase {
         )
 
         let legacyType = NSPasteboard.PasteboardType("NSFilenamesPboardType")
-        let layout = try XCTUnwrap(PasteboardWriter.copy(notes: store.notes, store: store, pasteboard: pasteboard))
+        let layout = try XCTUnwrap(PasteboardWriter.copy(notes: notesInAddedOrder, store: store, pasteboard: pasteboard))
 
         let fullPaths = try XCTUnwrap(pasteboard.propertyList(forType: legacyType) as? [String])
         XCTAssertEqual(fullPaths, layout.attachmentURLs.map(\.path))
@@ -335,7 +340,7 @@ final class PasteboardWriterTests: XCTestCase {
     func testTextOnlyCopyDoesNotCarryLegacyFilenamesFlavor() {
         store.add(text: "hello", sourceApp: nil)
 
-        PasteboardWriter.copy(notes: store.notes, store: store, pasteboard: pasteboard)
+        PasteboardWriter.copy(notes: notesInAddedOrder, store: store, pasteboard: pasteboard)
 
         XCTAssertNil(pasteboard.propertyList(forType: NSPasteboard.PasteboardType("NSFilenamesPboardType")))
     }
@@ -357,14 +362,14 @@ final class PasteboardWriterTests: XCTestCase {
         )
         store.add(text: "second", sourceApp: nil)
 
-        let layout = try XCTUnwrap(PasteboardWriter.copyAsList(notes: store.notes, store: store, pasteboard: pasteboard))
+        let layout = try XCTUnwrap(PasteboardWriter.copyAsList(notes: notesInAddedOrder, store: store, pasteboard: pasteboard))
         XCTAssertEqual(layout.text, "1. first\n2. shot.png\n3. second")
         // The attachment-only note in between is filtered out before
         // numbering, so textWithoutFilenames stays contiguous: 1, 2 — not
         // 1, 3.
         XCTAssertEqual(layout.textWithoutFilenames, "1. first\n2. second")
 
-        let plainLayout = try XCTUnwrap(PasteboardWriter.copy(notes: store.notes, store: store, pasteboard: pasteboard))
+        let plainLayout = try XCTUnwrap(PasteboardWriter.copy(notes: notesInAddedOrder, store: store, pasteboard: pasteboard))
         XCTAssertEqual(plainLayout.text, "first\n\nshot.png\n\nsecond")
         XCTAssertEqual(plainLayout.textWithoutFilenames, "first\n\nsecond")
     }
